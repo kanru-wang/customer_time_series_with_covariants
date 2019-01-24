@@ -1,0 +1,27 @@
+---
+title: "customer_time_series_multivariable"
+output: html_notebook
+---
+
+
+
+```{r}
+library(readr)
+library(forecast)
+train <- read_csv("C:/Users/wangka3/Desktop/learning/R_exercise2/train.csv", 
+    col_types = cols(end_time = col_datetime(format = "%d/%m/%Y %H:%M"), 
+        start_time = col_datetime(format = "%d/%m/%Y %H:%M")))
+test <- read_csv("C:/Users/wangka3/Desktop/learning/R_exercise2/test.csv", 
+    col_types = cols(end_time = col_datetime(format = "%Y-%m-%d %H:%M:%S"), 
+        start_time = col_datetime(format = "%Y-%m-%d %H:%M:%S")))
+
+```
+
+
+Avoid "peeking into the future". 
+A moving window for the last 24 hours
+
+```{r}
+
+```
+
