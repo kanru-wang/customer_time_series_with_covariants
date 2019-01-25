@@ -9,6 +9,7 @@ library(forecast)
 combined_clean <- read_csv("C:/Users/wangka3/Desktop/learning/R_exercise2/combined_clean.csv")
 ```
 
+# The attempt to use ARIMAX.
 ```{r}
 train_data = combined_clean[1:15912, 5:58]
 test_data = combined_clean[15913:17376, 5:58]
@@ -28,38 +29,45 @@ model_cust
 checkresiduals(model_cust)
 ```
 
-
+### ARIMA does not capture seasonality well. Need to use another model.
 ```{r}
 forecast_cust = forecast(model_cust, xreg = data.matrix(train_data))
 (autoplot(forecast_cust))
 ```
 
-
+# Now use msts with seasonal periods equals to 24 hours and 24 * 7 = 168 hours.
 ```{r}
-model_cust_simple = auto.arima(combined_clean$cust_168[10000:1400], D = 1)
+cust <- msts(log(combined_clean$cust_168[1:15841] + 1), seasonal.periods=c(24,168))
+model_cust <- tbats(cust)
+(autoplot(forecast(model_cust, h = 17376 - 15841)))
 ```
 
-```{r}
-forecast_cust_simple = forecast(model_cust_simple, h = 1000)
-(autoplot(forecast_cust_simple))
-```
 
 ```{r}
-model_others_simple = auto.arima(combined_clean$others_168[10000:1400])
-```
-
-```{r}
-forecast_others_simple = forecast(model_others_simple, h = 1000)
-(autoplot(forecast_cust_simple))
+others <- msts(log(combined_clean$others_168[1:15841] + 1), seasonal.periods=c(24,168))
+model_others <- tbats(others)
+(autoplot(forecast(model_others, h = 17376 - 15841)))
 ```
 
 
 
 
 
+
+
+
+
+
+
+
 ```{r}
-test <- msts(combined_clean$others_168[1:15912], seasonal.periods=c(24,168), )
+test <- msts(log(combined_clean$others_168[1:15912] + 1), seasonal.periods=c(24,168))
 test.fit <- tbats(test)
-(plot(forecast(test.fit, h = 2000)))
+(autoplot(forecast(test.fit, h = 2000)))
 ```
 
+```{r}
+test2 <- msts(log(combined_clean$cust_168[1:15841] + 1), seasonal.periods=c(24,168))
+test2.fit <- tbats(test2)
+(autoplot(forecast(test2.fit, h = 2000)))
+```
