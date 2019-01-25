@@ -35,7 +35,7 @@ forecast_cust = forecast(model_cust, xreg = data.matrix(train_data))
 (autoplot(forecast_cust))
 ```
 
-# Now use msts with seasonal periods equals to 24 hours and 24 * 7 = 168 hours.
+# Now use tbats on msts with seasonal periods equals to 24 hours and 24 * 7 = 168 hours.
 
 * 15841 is the last row that has coherent time series data.
 * 15913 is the first row of the test dataset.
@@ -53,33 +53,17 @@ model_others <- tbats(others)
 (autoplot(forecast(model_others, h = 17376 - 15841)))
 ```
 
-# Output
-
-Again, remember that:
-
-* 15841 is the last row that has coherent time series data.
-* 15913 is the first row of the test dataset.
-* 17376 is the last row of the combined train/test dataset.
-```{r}
-pred_cust = forecast(model_cust, h = 17376 - 15841)
-result_cust = exp(pred_cust$mean) - 1
-result_cust = result_cust[(15913 - 15841) : (17376 - 15841)]
-```
-
-```{r}
-pred_others = forecast(model_others, h = 17376 - 15841)
-result_others = exp(pred_others$mean) - 1
-result_others = result_others[(15913 - 15841) : (17376 - 15841)]
-```
-
-
-
+# Try tbats with covariates in xreg.
 
 ```{r}
 train_data = combined_clean[1:15841, 5:58]
 test_data = combined_clean[15842:17376, 5:58]
 ```
 
+
+
+Later I realised that the tbats model is based on ets which will not take advantage of the covariates.
+https://robjhyndman.com/hyndsight/tbats-with-regressors/
 ```{r}
 cust <- msts(log(combined_clean$cust_168[1:15841] + 1), seasonal.periods=c(24,168))
 model_cust_improved <- tbats(cust, xreg = data.matrix(train_data))
@@ -98,4 +82,14 @@ test = auto.arima(cust)
 forecast_test = forecast(test, h = 1500)
 (autoplot(forecast_test))
 ```
+
+# Try arima on msts with seasonal periods equals to 24 hours and 24 * 7 = 168 hours, with covariates in xreg.
+```{r}
+model_arimax_cust_with_covariates = auto.arima(cust, xreg = data.matrix(train_data))
+```
+
+
+sd
+
+
 

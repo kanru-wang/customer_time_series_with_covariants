@@ -1,0 +1,147 @@
+---
+title: "customer_time_series_multivariate"
+output: html_notebook
+---
+
+## Import data processed in Python 
+```{r}
+library(readr)
+library(forecast)
+combined_clean <- read_csv("C:/Users/wangka3/Desktop/learning/R_exercise2/combined_clean.csv")
+```
+
+## The attempt to use ARIMAX
+```{r}
+train_data = combined_clean[1:15912, 5:58]
+test_data = combined_clean[15913:17376, 5:58]
+```
+
+```{r}
+model_cust = auto.arima(combined_clean$cust_168[1:15912], 
+                        xreg = data.matrix(train_data))
+```
+
+```{r}
+model_cust
+```
+
+
+```{r}
+checkresiduals(model_cust)
+```
+
+### ARIMA does not capture seasonality well. Need to use another model.
+```{r}
+forecast_cust = forecast(model_cust, xreg = data.matrix(train_data))
+(autoplot(forecast_cust))
+```
+
+## Now use tbats on msts 
+
+### With seasonal periods equals to 24 hours and 24 * 7 = 168 hours.
+
+* 15841 is the last row that has coherent time series data.
+* 15913 is the first row of the test dataset.
+* 17376 is the last row of the combined train/test dataset.
+```{r}
+cust <- msts(log(combined_clean$cust_168[1:15841] + 1), seasonal.periods=c(24,168))
+model_cust <- tbats(cust)
+(autoplot(forecast(model_cust, h = 17376 - 15841)))
+```
+
+
+```{r}
+others <- msts(log(combined_clean$others_168[1:15841] + 1), seasonal.periods=c(24,168))
+model_others <- tbats(others)
+(autoplot(forecast(model_others, h = 17376 - 15841)))
+```
+
+## Try tbats on msts with covariates in xreg
+
+```{r}
+train_data = combined_clean[1:15841, 5:58]
+test_data = combined_clean[15842:17376, 5:58]
+```
+
+Later I realised that the tbats model is based on ets which will not take advantage of the covariates.
+https://robjhyndman.com/hyndsight/tbats-with-regressors/
+```{r}
+cust <- msts(log(combined_clean$cust_168[1:15841] + 1), seasonal.periods=c(24,168))
+model_cust_improved <- tbats(cust, xreg = data.matrix(train_data))
+```
+
+```{r}
+(autoplot(forecast(model_cust_improved, h = 17376 - 15841, xreg = test_data)))
+```
+
+
+## Try arima on msts with covariates in xreg
+
+### With seasonal periods equals to 24 hours and 24 * 7 = 168 hours, this will be the best model as you will see. This version of the arima is better than the first attempt in that:
+
+* time series is specified as multi seasonal
+* time series is log transformed
+
+### However, due to time limit, I will reduce the training dataset to only the most important feature, var_t, according to data visulisation, and its derived features, in order to reduce computation time.
+
+Remember that:
+
+* 15841 is the last row that has coherent time series data.
+* 15913 is the first row of the test dataset.
+* 17376 is the last row of the combined train/test dataset.
+* Column 14 to 22 are var_t related features.
+
+```{r}
+train_data = combined_clean[1:15841, 14:22]
+test_data = combined_clean[15842:17376, 14:22]
+```
+
+```{r}
+cust <- msts(log(combined_clean$cust_168[1:15841] + 1), seasonal.periods=c(24,168))
+others <- msts(log(combined_clean$others_168[1:15841] + 1), seasonal.periods=c(24,168))
+```
+
+```{r}
+model_arimax_cust_with_covariates = auto.arima(cust, xreg = data.matrix(train_data))
+```
+
+```{r}
+model_arimax_others_with_covariates = auto.arima(others, xreg = data.matrix(train_data))
+```
+
+
+## Prediction and Output
+
+Again, remember that:
+
+* 15841 is the last row that has coherent time series data.
+* 15913 is the first row of the test dataset.
+* 17376 is the last row of the combined train/test dataset.
+```{r}
+pred_cust = forecast(model_arimax_cust_with_covariates, h = 17376 - 15841, xreg = data.matrix(test_data))
+autoplot(pred_cust)
+result_cust = exp(pred_cust$mean) - 1
+result_cust = result_cust[(15913 - 15841) : (17376 - 15841)]
+```
+
+```{r}
+pred_others = forecast(model_arimax_others_with_covariates, h = 17376 - 15841, xreg = test_data)
+autoplot(pred_others)
+result_others = exp(pred_others$mean) - 1
+result_others = result_others[(15913 - 15841) : (17376 - 15841)]
+```
+
+```{r}
+output = combined_clean[15842:17376, 1:2]
+output['cust_pred'] = result_cust
+output['others_pred'] = result_others
+output['total_cnt_pred'] = output$cust_pred + output$others_pred
+```
+
+```{r}
+write.csv(output, file = "output.csv", row.names=FALSE)
+```
+
+
+
+
