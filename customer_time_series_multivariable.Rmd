@@ -36,6 +36,10 @@ forecast_cust = forecast(model_cust, xreg = data.matrix(train_data))
 ```
 
 # Now use msts with seasonal periods equals to 24 hours and 24 * 7 = 168 hours.
+
+* 15841 is the last row that has coherent time series data.
+* 15913 is the first row of the test dataset.
+* 17376 is the last row of the combined train/test dataset.
 ```{r}
 cust <- msts(log(combined_clean$cust_168[1:15841] + 1), seasonal.periods=c(24,168))
 model_cust <- tbats(cust)
@@ -49,25 +53,48 @@ model_others <- tbats(others)
 (autoplot(forecast(model_others, h = 17376 - 15841)))
 ```
 
+# Output
 
+Again, remember that:
 
+* 15841 is the last row that has coherent time series data.
+* 15913 is the first row of the test dataset.
+* 17376 is the last row of the combined train/test dataset.
+```{r}
+pred_cust = forecast(model_cust, h = 17376 - 15841)
+result_cust = exp(pred_cust$mean) - 1
+result_cust = result_cust[(15913 - 15841) : (17376 - 15841)]
+```
 
-
-
-
-
+```{r}
+pred_others = forecast(model_others, h = 17376 - 15841)
+result_others = exp(pred_others$mean) - 1
+result_others = result_others[(15913 - 15841) : (17376 - 15841)]
+```
 
 
 
 
 ```{r}
-test <- msts(log(combined_clean$others_168[1:15912] + 1), seasonal.periods=c(24,168))
-test.fit <- tbats(test)
-(autoplot(forecast(test.fit, h = 2000)))
+train_data = combined_clean[1:15841, 5:58]
+test_data = combined_clean[15842:17376, 5:58]
 ```
 
 ```{r}
-test2 <- msts(log(combined_clean$cust_168[1:15841] + 1), seasonal.periods=c(24,168))
-test2.fit <- tbats(test2)
-(autoplot(forecast(test2.fit, h = 2000)))
+cust <- msts(log(combined_clean$cust_168[1:15841] + 1), seasonal.periods=c(24,168))
+model_cust_improved <- tbats(cust, xreg = data.matrix(train_data))
 ```
+
+```{r}
+(autoplot(forecast(model_cust_improved, h = 17376 - 15841, xreg = test_data)))
+```
+
+
+
+```{r}
+z_cust <- fourier(cust, K=c(2,5))
+zf_cust <- fourier(y, K=c(2,5), h=100)
+fit <- auto.arima(y, xreg=cbind(z,holiday), seasonal=FALSE)
+fc <- forecast(fit, xreg=cbind(zf,holidayf), h=100)
+```
+
